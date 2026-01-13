@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
 
 export async function PATCH(
     req: Request,
@@ -29,7 +30,12 @@ export async function PATCH(
             return new NextResponse("Not Found", { status: 404 });
         }
 
-        if (existingTodo.userId !== session.user.id) {
+        const user = {
+            ...session.user,
+            role: (session.user as any).role || "user"
+        };
+
+        if (!can("update", "todo", user, existingTodo)) {
             return new NextResponse("Forbidden", { status: 403 });
         }
 
@@ -72,7 +78,12 @@ export async function DELETE(
             return new NextResponse("Not Found", { status: 404 });
         }
 
-        if (existingTodo.userId !== session.user.id) {
+        const user = {
+            ...session.user,
+            role: (session.user as any).role || "user"
+        };
+
+        if (!can("delete", "todo", user, existingTodo)) {
             return new NextResponse("Forbidden", { status: 403 });
         }
 
