@@ -7,12 +7,10 @@ import { useTodos } from "@/hooks/use-todos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Trash2, Pencil, LogOut, CheckCircle2, CircleDashed, Clock } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
     const router = useRouter();
