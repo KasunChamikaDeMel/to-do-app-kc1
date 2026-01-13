@@ -1,11 +1,10 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../lib/prisma-client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:C:/Users/User/Desktop/Projects/to-do-app-kc1/prisma/dev.db"
 }
 
 model User {
@@ -18,10 +17,9 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   emailVerified Boolean?
-  
-  todos         Todo[]
-  sessions      Session[]
   accounts      Account[]
+  sessions      Session[]
+  todos         Todo[]
 
   @@map("user")
 }
@@ -29,6 +27,9 @@ model User {
 model Session {
   id        String   @id
   expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   ipAddress String?
   userAgent String?
   userId    String
@@ -38,16 +39,20 @@ model Session {
 }
 
 model Account {
-  id           String    @id
-  accountId    String
-  providerId   String
-  userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken  String?
-  refreshToken String?
-  idToken      String?
-  expiresAt    DateTime?
-  password     String?
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("account")
 }
@@ -57,6 +62,8 @@ model Verification {
   identifier String
   value      String
   expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
 
   @@map("verification")
 }
@@ -69,7 +76,6 @@ model Todo {
   status      String   @default("draft")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("todo")

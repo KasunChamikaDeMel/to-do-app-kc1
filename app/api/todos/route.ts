@@ -2,60 +2,42 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
+
+async function getSessionUser() {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return null;
+    return { ...session.user, role: (session.user as any).role || "user" };
+}
 
 export async function GET() {
-    try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
+    const user = await getSessionUser();
+    if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-        if (!session) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+    if (!can("read", user)) return new NextResponse("Forbidden", { status: 403 });
 
-        const todos = await prisma.todo.findMany({
-            where: {
-                userId: session.user.id,
-            },
-            orderBy: {
-                createdAt: "desc",
-            },
-        });
+    const todos = await prisma.todo.findMany({
+        where: user.role === "user" ? { userId: user.id } : {},
+        orderBy: { createdAt: "desc" },
+        include: { user: { select: { name: true } } }
+    });
 
-        return NextResponse.json(todos);
-    } catch (error) {
-        return new NextResponse("Server Error !", { status: 500 });
-    }
+    return NextResponse.json(todos);
 }
 
 export async function POST(req: Request) {
-    try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
+    const user = await getSessionUser();
+    if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-        if (!session) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+    if (!can("create", user)) return new NextResponse("Forbidden", { status: 403 });
 
-        const body = await req.json();
-        const { title, description, status } = body;
+    const { title, description } = await req.json();
+    if (!title) return new NextResponse("Title is required", { status: 400 });
 
-        if (!title) {
-            return new NextResponse("Title is required", { status: 400 });
-        }
+    const todo = await prisma.todo.create({
+        data: { title, description, userId: user.id }
+    });
 
-        const todo = await prisma.todo.create({
-            data: {
-                title,
-                description,
-                status: status || "draft",
-                userId: session.user.id,
-            },
-        });
-
-        return NextResponse.json(todo);
-    } catch (error) {
-        return new NextResponse("Server Error !", { status: 500 });
-    }
+    return NextResponse.json(todo);
 }
+

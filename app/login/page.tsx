@@ -1,81 +1,86 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Mail, KeyRound, Loader2, CheckCircle2 } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const registered = searchParams.get("registered");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    async function onSubmit(e: React.FormEvent) {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
+        setLoading(true);
         setError("");
 
-        const { error } = await signIn.email({
-            email,
-            password,
-            fetchOptions: {
-                onSuccess: () => {
-                    router.push("/dashboard");
-                },
-            },
-        });
-
-        if (error) {
-            setError(error.message ?? "error !");
+        const { data, error: err } = await signIn.email({ email, password });
+        if (err) {
+            setError(err.message || "Login failed");
+            setLoading(false);
+        } else if (data) {
+            router.push("/dashboard");
         }
-
-        setIsLoading(false);
-    }
+    };
 
     return (
-        <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-zinc-900">
-            <div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-black">
-                <div className="mb-6 text-center">
-                    <h1 className="text-2xl font-bold">Welcome Back</h1>
-                    <p className="text-sm text-gray-500">Sign in</p>
-                </div>
-
-                <form onSubmit={onSubmit} className="space-y-4">
-                    {error && (
-                        <div className="text-sm text-red-500 text-center">{error}</div>
-                    )}
-
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email" type="email" placeholder="user@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                        />
-                    </div>
-
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Signing in..." : "Sign In"}
-                    </Button>
-                </form>
-
-                <div className="mt-4 text-center text-sm">
-                    No account?{" "}
-                    <Link href="/register" className="underline hover:text-gray-900">
-                        Sign up
-                    </Link>
-                </div>
+        <div className="w-full max-w-sm space-y-8">
+            <div className="text-center">
+                <h1 className="text-3xl font-bold tracking-tight">Sign In</h1>
+                <p className="text-zinc-500 mt-2">Access your task workspace</p>
             </div>
+
+            <form onSubmit={handleLogin} className="space-y-4">
+                {registered && !error && (
+                    <div className="flex items-center gap-2 p-3 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-medium dark:bg-emerald-500/10 dark:text-emerald-400">
+                        <CheckCircle2 className="h-4 w-4" /> Account created! Please sign in.
+                    </div>
+                )}
+                {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs text-center dark:bg-red-500/10 dark:text-red-400">{error}</div>}
+
+                <div className="space-y-2">
+                    <Label>Email</Label>
+                    <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                        <Input className="pl-10" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Password</Label>
+                    <div className="relative">
+                        <KeyRound className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                        <Input className="pl-10" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                    </div>
+                </div>
+
+                <Button className="w-full h-11 bg-zinc-900 dark:bg-white text-white dark:text-black" disabled={loading}>
+                    {loading ? <Loader2 className="animate-spin" /> : "Sign In"}
+                </Button>
+            </form>
+
+            <p className="text-center text-sm text-zinc-500">
+                New here? <Link href="/register" className="font-bold text-black dark:text-white">Create account</Link>
+            </p>
+        </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <div className="flex h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-6">
+            <Suspense fallback={<Loader2 className="animate-spin text-zinc-400" />}>
+                <LoginForm />
+            </Suspense>
         </div>
     );
 }

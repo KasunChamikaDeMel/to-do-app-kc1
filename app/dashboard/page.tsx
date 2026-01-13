@@ -2,232 +2,163 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "@/lib/auth-client";
+import { useSession, authClient } from "@/lib/auth-client";
 import { useTodos } from "@/hooks/use-todos";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Plus, Trash2, Pencil, LogOut } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, Trash2, Pencil, LogOut, CheckCircle2, CircleDashed, Clock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
     const router = useRouter();
-    const { data: session, isPending: isSessionLoading } = useSession();
+    const { data: session, isPending } = useSession();
     const { todos, isLoading, createTodo, updateTodo, deleteTodo } = useTodos();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [editingTodo, setEditingTodo] = useState<any>(null); // Type 'any' for simplicity as per request, or better Todo type
+    const [editingTodo, setEditingTodo] = useState<any>(null);
+    const [form, setForm] = useState({ title: "", description: "", status: "draft" });
 
-    const [formData, setFormData] = useState({
-        title: "",
-        description: "",
-        status: "draft",
-    });
+    if (isPending) return <div className="flex h-screen items-center justify-center text-zinc-400">Loading...</div>;
+    if (!session) { router.push("/login"); return null }
 
-    if (isSessionLoading) {
-        return <div className="flex h-screen items-center justify-center">Loading...</div>;
-    }
+    const user = { ...session.user, role: (session.user as any).role || "user" };
 
-    if (!session) {
-        router.push("/login");
-        return null;
-    }
-
-    const handleCreate = async (e: React.FormEvent) => {
+    const saveTodo = (e: React.FormEvent) => {
         e.preventDefault();
-        createTodo({
-            title: formData.title,
-            description: formData.description,
-        });
-        setIsCreateOpen(false);
-        setFormData({ title: "", description: "", status: "draft" });
-    };
-
-    const handleUpdate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!editingTodo) return;
-
-        updateTodo({
-            id: editingTodo.id,
-            title: formData.title,
-            description: formData.description,
-            status: formData.status,
-        });
-        setEditingTodo(null);
-        setFormData({ title: "", description: "", status: "draft" });
-    };
-
-    const openEdit = (todo: any) => {
-        setEditingTodo(todo);
-        setFormData({
-            title: todo.title,
-            description: todo.description || "",
-            status: todo.status,
-        });
-    };
-
-    const handleDelete = (id: string) => {
-        if (confirm("Are you sure you want to delete this todo?")) {
-            deleteTodo(id);
+        if (editingTodo) {
+            updateTodo({ id: editingTodo.id, ...form });
+            setEditingTodo(null);
+        } else {
+            createTodo(form);
+            setIsCreateOpen(false);
         }
+        setForm({ title: "", description: "", status: "draft" });
     };
 
-    const handleLogout = async () => {
-        await authClient.signOut();
-        router.push("/login");
+    const startEdit = (todo: any) => {
+        setEditingTodo(todo);
+        setForm({ title: todo.title, description: todo.description || "", status: todo.status });
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-8 dark:bg-zinc-900">
-            <div className="mx-auto max-w-5xl">
-                <div className="mb-8 flex items-center justify-between">
+        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 px-4 pb-20">
+            <header className="mx-auto max-w-5xl flex items-center justify-between py-6">
+                <div className="flex items-center gap-3">
+                    <div className="bg-black dark:bg-white text-white dark:text-black p-1.5 rounded font-bold">TF</div>
                     <div>
-                        <h1 className="text-3xl font-bold dark:text-white">My Todos</h1>
-                        <p className="text-gray-500">Welcome back, {session.user.name}</p>
+                        <h1 className="font-bold text-lg leading-tight">Workspace</h1>
+                        <p className="text-[10px] uppercase tracking-widest text-zinc-400">{user.role}</p>
                     </div>
-                    <div className="flex gap-4">
-                        <Button variant="outline" onClick={handleLogout}>
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Sign Out
-                        </Button>
+                </div>
+                <div className="flex items-center gap-4 text-sm font-medium">
+                    <span>{user.name}</span>
+                    <Button variant="ghost" size="sm" onClick={() => authClient.signOut().then(() => router.push("/login"))}>
+                        <LogOut className="h-4 w-4" />
+                    </Button>
+                </div>
+            </header>
+
+            <main className="mx-auto max-w-5xl mt-10">
+                <div className="flex items-center justify-between mb-8">
+                    <h2 className="text-2xl font-bold">My Tasks</h2>
+                    {user.role === "user" && (
                         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                             <DialogTrigger asChild>
-                                <Button>
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    New Todo
+                                <Button className="rounded-full px-6 bg-zinc-900 dark:bg-white text-white dark:text-black">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> New Task
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle>Create New Todo</DialogTitle>
-                                </DialogHeader>
-                                <form onSubmit={handleCreate} className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="title">Title</Label>
-                                        <Input
-                                            id="title"
-                                            value={formData.title}
-                                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label htmlFor="description">Description</Label>
-                                        <Textarea
-                                            id="description"
-                                            value={formData.description}
-                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                        />
-                                    </div>
-                                    <Button type="submit" className="w-full">Create Todo</Button>
+                                <DialogHeader><DialogTitle>New Task</DialogTitle></DialogHeader>
+                                <form onSubmit={saveTodo} className="space-y-4 pt-4">
+                                    <Input placeholder="Task Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                                    <Textarea placeholder="Details..." value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                                    <Button type="submit" className="w-full">Create</Button>
                                 </form>
                             </DialogContent>
                         </Dialog>
-                    </div>
+                    )}
                 </div>
 
                 {isLoading ? (
-                    <div className="text-center text-gray-500">Loading todos...</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3].map(i => <div key={i} className="h-32 bg-zinc-200 dark:bg-zinc-800 animate-pulse rounded-xl" />)}
+                    </div>
                 ) : (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {todos?.map((todo) => (
-                            <Card key={todo.id} className="transition-shadow hover:shadow-md">
-                                <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-lg font-medium">
-                                        {todo.title}
-                                    </CardTitle>
-                                    <div className={`rounded-full px-2 py-1 text-xs font-semibold ${todo.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                            todo.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-gray-100 text-gray-800'
-                                        }`}>
-                                        {todo.status}
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="text-sm text-gray-500 line-clamp-3">
-                                        {todo.description || "No description"}
-                                    </p>
-                                </CardContent>
-                                <CardFooter className="flex justify-end gap-2">
-                                    <Dialog open={!!editingTodo} onOpenChange={(open) => !open && setEditingTodo(null)}>
-                                        <DialogTrigger asChild>
-                                            <Button variant="ghost" size="icon" onClick={() => openEdit(todo)}>
-                                                <Pencil className="h-4 w-4" />
-                                            </Button>
-                                        </DialogTrigger>
-                                        {editingTodo?.id === todo.id && (
-                                            <DialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Edit Todo</DialogTitle>
-                                                </DialogHeader>
-                                                <form onSubmit={handleUpdate} className="space-y-4">
-                                                    <div className="space-y-2">
-                                                        <Label>Title</Label>
-                                                        <Input
-                                                            value={formData.title}
-                                                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                                            required
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Description</Label>
-                                                        <Textarea
-                                                            value={formData.description}
-                                                            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label>Status</Label>
-                                                        <Select
-                                                            value={formData.status}
-                                                            onValueChange={(val) => setFormData({ ...formData, status: val })}
-                                                        >
-                                                            <SelectTrigger>
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="draft">Draft</SelectItem>
-                                                                <SelectItem value="in-progress">In Progress</SelectItem>
-                                                                <SelectItem value="completed">Completed</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    <Button type="submit" className="w-full">Save Changes</Button>
-                                                </form>
-                                            </DialogContent>
-                                        )}
-                                    </Dialog>
-                                    <Button variant="ghost" size="icon" onClick={() => handleDelete(todo.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                </CardFooter>
-                            </Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {todos?.map((todo: any) => (
+                            <TodoCard
+                                key={todo.id}
+                                todo={todo}
+                                user={user}
+                                onEdit={() => startEdit(todo)}
+                                onDelete={() => confirm("Delete this task?") && deleteTodo(todo.id)}
+                            />
                         ))}
                     </div>
                 )}
+            </main>
 
-                {!isLoading && todos?.length === 0 && (
-                    <div className="mt-12 text-center">
-                        <p className="text-gray-500">No todos found. Create one to get started!</p>
-                    </div>
-                )}
-            </div>
+            {/* Edit Dialog */}
+            <Dialog open={!!editingTodo} onOpenChange={(open) => !open && setEditingTodo(null)}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Edit Task</DialogTitle></DialogHeader>
+                    <form onSubmit={saveTodo} className="space-y-4 pt-4">
+                        <Input placeholder="Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                        <Textarea placeholder="Description" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                        <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="draft">Draft</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Button type="submit" className="w-full">Save Changes</Button>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
+
+function TodoCard({ todo, user, onEdit, onDelete }: any) {
+    const isOwner = todo.userId === user.id;
+    const canDelete = user.role === "admin" || (isOwner && todo.status === "draft");
+
+    const statusIcons: any = {
+        completed: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
+        in_progress: <Clock className="h-4 w-4 text-amber-500" />,
+        draft: <CircleDashed className="h-4 w-4 text-zinc-400" />
+    };
+
+    return (
+        <Card className="border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-bold truncate pr-2">{todo.title}</CardTitle>
+                <div className="flex-shrink-0">{statusIcons[todo.status]}</div>
+            </CardHeader>
+            <CardContent>
+                <p className="text-xs text-zinc-500 line-clamp-2 h-8">{todo.description || "N/A"}</p>
+                {(user.role !== "user") && (
+                    <p className="text-[9px] font-bold text-zinc-400 mt-2 uppercase">By: {todo.user?.name}</p>
+                )}
+                <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-zinc-50 dark:border-zinc-800">
+                    {user.role === "user" && isOwner && (
+                        <Button variant="ghost" size="icon" onClick={onEdit} className="h-7 w-7"><Pencil className="h-3 w-3" /></Button>
+                    )}
+                    {canDelete && (
+                        <Button variant="ghost" size="icon" onClick={onDelete} className="h-7 w-7 text-red-500 hover:text-red-600"><Trash2 className="h-3 w-3" /></Button>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+

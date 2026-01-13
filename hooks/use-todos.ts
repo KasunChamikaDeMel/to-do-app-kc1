@@ -1,74 +1,37 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Todo } from "@/lib/prisma-client/client";
-
-async function fetchTodos() {
-    const res = await fetch("/api/todos");
-    if (!res.ok) throw new Error("Failed to fetch todos");
-    return res.json() as Promise<Todo[]>;
-}
-
-async function createTodo(data: { title: string; description?: string }) {
-    const res = await fetch("/api/todos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to create todo");
-    return res.json() as Promise<Todo>;
-}
-
-async function updateTodo(data: { id: string; title?: string; description?: string; status?: string }) {
-    const res = await fetch(`/api/todos/${data.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-    });
-    if (!res.ok) throw new Error("Failed to update todo");
-    return res.json() as Promise<Todo>;
-}
-
-async function deleteTodo(id: string) {
-    const res = await fetch(`/api/todos/${id}`, {
-        method: "DELETE",
-    });
-    if (!res.ok) throw new Error("Failed to delete todo");
-}
 
 export function useTodos() {
-    const queryClient = useQueryClient();
+    const qc = useQueryClient();
+    const refresh = () => qc.invalidateQueries({ queryKey: ["todos"] });
 
-    const todos = useQuery({
+    const { data: todos, isLoading } = useQuery({
         queryKey: ["todos"],
-        queryFn: fetchTodos,
+        queryFn: () => fetch("/api/todos").then(res => res.json())
     });
 
     const create = useMutation({
-        mutationFn: createTodo,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["todos"] });
-        },
+        mutationFn: (data: any) => fetch("/api/todos", {
+            method: "POST",
+            body: JSON.stringify(data),
+            headers: { "Content-Type": "application/json" }
+        }),
+        onSuccess: refresh
     });
 
     const update = useMutation({
-        mutationFn: updateTodo,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["todos"] });
-        },
+        mutationFn: (data: any) => fetch(`/api/todos/${data.id}`, {
+            method: "PATCH",
+            body: JSON.stringify(data),
+            headers: { "Content-Type": "application/json" }
+        }),
+        onSuccess: refresh
     });
 
     const remove = useMutation({
-        mutationFn: deleteTodo,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["todos"] });
-        },
+        mutationFn: (id: string) => fetch(`/api/todos/${id}`, { method: "DELETE" }),
+        onSuccess: refresh
     });
 
-    return {
-        todos: todos.data,
-        isLoading: todos.isLoading,
-        error: todos.error,
-        createTodo: create.mutate,
-        updateTodo: update.mutate,
-        deleteTodo: remove.mutate,
-    };
+    return { todos, isLoading, createTodo: create.mutate, updateTodo: update.mutate, deleteTodo: remove.mutate };
 }
+

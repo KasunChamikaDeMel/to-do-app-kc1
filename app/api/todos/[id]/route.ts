@@ -4,95 +4,38 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { can } from "@/lib/permissions";
 
-export async function PATCH(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
+async function getContext(params: Promise<{ id: string }>) {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session) return { user: null };
 
-        if (!session) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+    const user = { ...session.user, role: (session.user as any).role || "user" };
+    const { id } = await params;
+    const todo = await prisma.todo.findUnique({ where: { id } });
 
-        const { id } = await params;
-        const body = await req.json();
-        const { title, description, status } = body;
-
-        // Verify ownership
-        const existingTodo = await prisma.todo.findUnique({
-            where: { id },
-        });
-
-        if (!existingTodo) {
-            return new NextResponse("Not Found", { status: 404 });
-        }
-
-        const user = {
-            ...session.user,
-            role: (session.user as any).role || "user"
-        };
-
-        if (!can("update", "todo", user, existingTodo)) {
-            return new NextResponse("Forbidden", { status: 403 });
-        }
-
-        const updatedTodo = await prisma.todo.update({
-            where: { id },
-            data: {
-                title,
-                description,
-                status,
-            },
-        });
-
-        return NextResponse.json(updatedTodo);
-    } catch (error) {
-        return new NextResponse("Server Error !", { status: 500 });
-    }
+    return { user, id, todo };
 }
 
-export async function DELETE(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
-    try {
-        const session = await auth.api.getSession({
-            headers: await headers(),
-        });
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { user, id, todo } = await getContext(params);
+    if (!user) return new NextResponse("Unauthorized", { status: 401 });
+    if (!todo) return new NextResponse("Not Found", { status: 404 });
 
-        if (!session) {
-            return new NextResponse("Unauthorized", { status: 401 });
-        }
+    if (!can("update", user, todo)) return new NextResponse("Forbidden", { status: 403 });
 
-        const { id } = await params;
+    const data = await req.json();
+    const updated = await prisma.todo.update({ where: { id }, data });
 
-        // Verify ownership
-        const existingTodo = await prisma.todo.findUnique({
-            where: { id },
-        });
-
-        if (!existingTodo) {
-            return new NextResponse("Not Found", { status: 404 });
-        }
-
-        const user = {
-            ...session.user,
-            role: (session.user as any).role || "user"
-        };
-
-        if (!can("delete", "todo", user, existingTodo)) {
-            return new NextResponse("Forbidden", { status: 403 });
-        }
-
-        await prisma.todo.delete({
-            where: { id },
-        });
-
-        return new NextResponse(null, { status: 204 });
-    } catch (error) {
-        return new NextResponse("Server Error !", { status: 500 });
-    }
+    return NextResponse.json(updated);
 }
+
+export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const { user, id, todo } = await getContext(params);
+    if (!user) return new NextResponse("Unauthorized", { status: 401 });
+    if (!todo) return new NextResponse("Not Found", { status: 404 });
+
+    if (!can("delete", user, todo)) return new NextResponse("Forbidden", { status: 403 });
+
+    await prisma.todo.delete({ where: { id } });
+    return new NextResponse(null, { status: 204 });
+}
+

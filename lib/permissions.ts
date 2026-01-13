@@ -1,26 +1,27 @@
-import { Todo } from "@/lib/prisma-client/client";
-
-interface UserLike {
-    id: string;
-    role: string;
-}
-
 export type Action = "create" | "read" | "update" | "delete";
-export type Resource = "todo";
 
-export function can(action: Action, resource: Resource, user: UserLike, data?: Todo) {
-    if (user.role === "admin") {
-        return true;
+export function can(action: Action, user: any, todo?: any) {
+    const role = user.role;
+    const isOwner = todo && todo.userId === user.id;
+
+    if (action === "read") {
+        if (role === "admin" || role === "manager") return true;
+        return !todo || isOwner; // Can see list or own todo
     }
 
-    if (resource === "todo") {
-        if (action === "create") return true;
+    if (action === "create") {
+        return role === "user";
+    }
 
-        if (data) {
-            // Users and Managers can only manage their own todos
-            return data.userId === user.id;
-        }
+    if (action === "update") {
+        return role === "user" && isOwner;
+    }
+
+    if (action === "delete") {
+        if (role === "admin") return true;
+        return role === "user" && isOwner && todo.status === "draft";
     }
 
     return false;
 }
+

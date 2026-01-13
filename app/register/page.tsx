@@ -8,79 +8,70 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { User, Mail, KeyRound, Shield, Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
     const router = useRouter();
-    const [name, setName] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [role, setRole] = useState("user");
-    const [isLoading, setIsLoading] = useState(false);
+    const [form, setForm] = useState({ name: "", email: "", password: "", role: "user" });
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
 
-    async function onSubmit(e: React.FormEvent) {
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
+        setLoading(true);
         setError("");
 
-        const { error } = await signUp.email({
-            email,
-            password,
-            name,
-            // @ts-expect-error - role is a custom field we added
-            role,
-            fetchOptions: {
-                onSuccess: () => {
-                    router.push("/dashboard");
-                },
-            },
-        });
+        // @ts-expect-error - autoLogin is a valid option but might not be in basic types
+        const { data, error: err } = await signUp.email({ ...form, autoLogin: false });
 
-        if (error) {
-            setError(error.message ?? "error !");
+        if (err) {
+            setError(err.message || "Something went wrong");
+            setLoading(false);
+        } else if (data) {
+            router.push("/login?registered=true");
         }
-
-        setIsLoading(false);
-    }
+    };
 
     return (
-        <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-zinc-900">
-            <div className="w-full max-w-sm rounded-lg border bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-black">
-                <div className="mb-6 text-center">
-                    <h1 className="text-2xl font-bold">Create Account</h1>
-                    <p className="text-sm text-gray-500">Get started</p>
+        <div className="flex h-screen items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-6">
+            <div className="w-full max-w-sm space-y-8 text-center sm:text-left">
+                <div className="text-center sm:text-left">
+                    <h1 className="text-3xl font-bold tracking-tight">Create Account</h1>
+                    <p className="text-zinc-500 mt-2 text-sm">Join TaskFlow to manage your work.</p>
                 </div>
 
-                <form onSubmit={onSubmit} className="space-y-4">
-                    {error && (
-                        <div className="text-sm text-red-500 text-center">{error}</div>
-                    )}
+                <form onSubmit={handleRegister} className="space-y-4">
+                    {error && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-xs text-center">{error}</div>}
 
-                    <div className="space-y-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
-                            id="name" placeholder="Your Name" value={name} onChange={(e) => setName(e.target.value)} required
-                        />
+                    <div className="space-y-2 text-left">
+                        <Label>Name</Label>
+                        <div className="relative">
+                            <User className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                            <Input className="pl-10" placeholder="John Doe" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email" type="email" placeholder="user@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} required
-                        />
+                    <div className="space-y-2 text-left">
+                        <Label>Email</Label>
+                        <div className="relative">
+                            <Mail className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                            <Input className="pl-10" type="email" placeholder="name@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-                        />
+                    <div className="space-y-2 text-left">
+                        <Label>Password</Label>
+                        <div className="relative">
+                            <KeyRound className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+                            <Input className="pl-10" type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+                        </div>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-2 text-left">
                         <Label>Role</Label>
-                        <Select value={role} onValueChange={setRole}>
-                            <SelectTrigger>
+                        <Select value={form.role} onValueChange={val => setForm({ ...form, role: val })}>
+                            <SelectTrigger className="pl-10 relative">
+                                <Shield className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -91,17 +82,14 @@ export default function RegisterPage() {
                         </Select>
                     </div>
 
-                    <Button type="submit" className="w-full" disabled={isLoading}>
-                        {isLoading ? "Creating..." : "Create Account"}
+                    <Button className="w-full h-11 bg-zinc-900 dark:bg-white text-white dark:text-black mt-2" disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin" /> : "Sign Up"}
                     </Button>
                 </form>
 
-                <div className="mt-4 text-center text-sm">
-                    Already have an account?{" "}
-                    <Link href="/login" className="underline hover:text-gray-900">
-                        Sign in
-                    </Link>
-                </div>
+                <p className="text-center text-sm text-zinc-500">
+                    Already have an account? <Link href="/login" className="font-bold text-black dark:text-white">Sign In</Link>
+                </p>
             </div>
         </div>
     );
