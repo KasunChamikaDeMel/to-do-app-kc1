@@ -1,12 +1,4 @@
-/*
-  Warnings:
 
-  - You are about to drop the column `expiresAt` on the `account` table. All the data in the column will be lost.
-  - Added the required column `updatedAt` to the `account` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `token` to the `session` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `updatedAt` to the `session` table without a default value. This is not possible if the table is not empty.
-
-*/
 -- AlterTable
 ALTER TABLE "verification" ADD COLUMN "createdAt" DATETIME DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE "verification" ADD COLUMN "updatedAt" DATETIME;
