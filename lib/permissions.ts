@@ -1,6 +1,16 @@
 export type Action = "create" | "read" | "update" | "delete";
 
-export function can(action: Action, user: any, todo?: any) {
+interface User {
+    id: string;
+    role: string;
+}
+
+interface Todo {
+    userId: string;
+    status: string;
+}
+
+export function can(action: Action, user: User, todo?: Todo) {
     const role = user.role;
     const isOwner = todo && todo.userId === user.id;
 

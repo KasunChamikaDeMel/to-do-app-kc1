@@ -8,7 +8,7 @@ async function getContext(params: Promise<{ id: string }>) {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return { user: null };
 
-    const user = { ...session.user, role: (session.user as any).role || "user" };
+    const user = { ...session.user, role: (session.user as { role?: string }).role || "user" };
     const { id } = await params;
     const todo = await prisma.todo.findUnique({ where: { id } });
 

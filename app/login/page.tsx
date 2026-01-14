@@ -25,6 +25,7 @@ function LoginForm() {
 
         const { data, error: err } = await signIn.email({ email, password });
         if (err) {
+            console.error(err);
             setError(err.message || "Login failed");
             setLoading(false);
         } else if (data) {

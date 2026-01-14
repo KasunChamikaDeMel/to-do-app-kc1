@@ -27,18 +27,17 @@ test.describe('ABAC and Todo Flow', () => {
         await expect(page).toHaveURL('/dashboard');
 
         // 2. Create a 'draft' todo
-        await page.click('text=New Todo');
-        await page.fill('input[id="title"]', 'Draft Task');
-        await page.click('button:has-text("Create Todo")');
+        await page.click('text=New Task');
+        await page.fill('input[placeholder="Task Title"]', 'Draft Task');
+        await page.click('button:has-text("Create")');
         await expect(page.locator('text=Draft Task')).toBeVisible();
 
         // 3. Create another task and set to 'in_progress'
-        await page.click('text=New Todo');
-        await page.fill('input[id="title"]', 'Progress Task');
-        await page.click('button:has-text("Create Todo")');
+        await page.click('text=New Task');
+        await page.fill('input[placeholder="Task Title"]', 'Progress Task');
+        await page.click('button:has-text("Create")');
 
         // Find 'Progress Task' card pencil icon
-        const progressCard = page.locator('.rounded-2xl', { hasText: 'Progress Task' });
         await page.click('.lucide-pencil');
         await page.selectOption('select', 'in_progress'); // This might need a selector fix for shadcn-ui
         // shadcn-ui select is more complex, but for simple test we'll assume it works if we can find the trigger

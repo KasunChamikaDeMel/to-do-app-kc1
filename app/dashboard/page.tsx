@@ -12,19 +12,36 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Trash2, Pencil, LogOut, CheckCircle2, CircleDashed, Clock } from "lucide-react";
 
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    image?: string | null;
+    role: string;
+}
+
+interface Todo {
+    id: string;
+    title: string;
+    description?: string;
+    status: "draft" | "in_progress" | "completed";
+    userId: string;
+    user?: { name: string | null };
+}
+
 export default function DashboardPage() {
     const router = useRouter();
     const { data: session, isPending } = useSession();
     const { todos, isLoading, createTodo, updateTodo, deleteTodo } = useTodos();
 
     const [isCreateOpen, setIsCreateOpen] = useState(false);
-    const [editingTodo, setEditingTodo] = useState<any>(null);
+    const [editingTodo, setEditingTodo] = useState<Todo | null>(null);
     const [form, setForm] = useState({ title: "", description: "", status: "draft" });
 
     if (isPending) return <div className="flex h-screen items-center justify-center text-zinc-400">Loading...</div>;
     if (!session) { router.push("/login"); return null }
 
-    const user = { ...session.user, role: (session.user as any).role || "user" };
+    const user = { ...session.user, role: (session.user as { role?: string }).role || "user" } as User;
 
     const saveTodo = (e: React.FormEvent) => {
         e.preventDefault();
@@ -38,7 +55,7 @@ export default function DashboardPage() {
         setForm({ title: "", description: "", status: "draft" });
     };
 
-    const startEdit = (todo: any) => {
+    const startEdit = (todo: Todo) => {
         setEditingTodo(todo);
         setForm({ title: todo.title, description: todo.description || "", status: todo.status });
     };
@@ -89,7 +106,7 @@ export default function DashboardPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {todos?.map((todo: any) => (
+                        {todos?.map((todo: Todo) => (
                             <TodoCard
                                 key={todo.id}
                                 todo={todo}
@@ -125,11 +142,11 @@ export default function DashboardPage() {
     );
 }
 
-function TodoCard({ todo, user, onEdit, onDelete }: any) {
+function TodoCard({ todo, user, onEdit, onDelete }: { todo: Todo; user: User; onEdit: () => void; onDelete: () => void }) {
     const isOwner = todo.userId === user.id;
     const canDelete = user.role === "admin" || (isOwner && todo.status === "draft");
 
-    const statusIcons: any = {
+    const statusIcons: Record<string, React.ReactNode> = {
         completed: <CheckCircle2 className="h-4 w-4 text-emerald-500" />,
         in_progress: <Clock className="h-4 w-4 text-amber-500" />,
         draft: <CircleDashed className="h-4 w-4 text-zinc-400" />

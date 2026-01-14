@@ -10,7 +10,7 @@ export function useTodos() {
     });
 
     const create = useMutation({
-        mutationFn: (data: any) => fetch("/api/todos", {
+        mutationFn: (data: { title: string; description: string }) => fetch("/api/todos", {
             method: "POST",
             body: JSON.stringify(data),
             headers: { "Content-Type": "application/json" }
@@ -19,7 +19,7 @@ export function useTodos() {
     });
 
     const update = useMutation({
-        mutationFn: (data: any) => fetch(`/api/todos/${data.id}`, {
+        mutationFn: (data: { id: string; title?: string; description?: string; status?: string }) => fetch(`/api/todos/${data.id}`, {
             method: "PATCH",
             body: JSON.stringify(data),
             headers: { "Content-Type": "application/json" }

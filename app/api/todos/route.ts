@@ -7,7 +7,7 @@ import { can } from "@/lib/permissions";
 async function getSessionUser() {
     const session = await auth.api.getSession({ headers: await headers() });
     if (!session) return null;
-    return { ...session.user, role: (session.user as any).role || "user" };
+    return { ...session.user, role: (session.user as { role?: string }).role || "user" };
 }
 
 export async function GET() {

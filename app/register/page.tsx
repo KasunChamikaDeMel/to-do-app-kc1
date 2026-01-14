@@ -25,6 +25,7 @@ export default function RegisterPage() {
         const { data, error: err } = await signUp.email({ ...form, autoLogin: false });
 
         if (err) {
+            console.error(err);
             setError(err.message || "Something went wrong");
             setLoading(false);
         } else if (data) {
